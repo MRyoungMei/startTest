@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+        
+        <context:property-placeholder location="classpath:jdbc.properties"/>
+        
+        <context:component-scan base-package="com.MRyoung">
+        	<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+        </context:component-scan>
+        
+        <!-- mybatis整合 -->
+        <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        	<property name="url" value="${jdbc.url}"></property>
+        	<property name="username" value="${jdbc.username}"></property>
+        	<property name="password" value="${jdbc.password}"></property>
+        	<property name="driverClassName" value="${jdbc.driverClassName}"></property>
+        </bean>
+        <!-- 配置sqlSessionFactory -->
+        <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        	<property name="dataSource" ref="dataSource"></property>
+        	<property name="mapperLocations" value="classpath:mappers/**/*.xml"></property>
+        	<property name="typeAliasesPackage" value="com.MRyoung.test1.pojo"></property>
+        	<property name="typeAliasesSuperType" value="com.MRyoung.commons.pojo.BasePojo"></property>
+        </bean>
+        <!-- 扫描器 -->
+        <!-- 在使用属性文件加载dataSource时此处引用sqlSessionFactory会使
+        sqlSessionFactory去立即执行dataSource的注入而此时属性文件还未加载完成，会导致无法得到需要的属性值 -->
+        <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        	<property name="basePackage" value="com.MRyoung.test1"></property>
+        	<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+        	<property name="annotationClass" value="com.MRyoung.commons.mapper.MybatisMapper"></property>
+        </bean>
+        
+        <!-- 事务管理器 -->
+    <bean id="txManage" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    	<property name="dataSource" ref="dataSource"></property>
+    </bean>
+    <!-- 声明式事务 -->
+        <tx:advice id="txAdvice" transaction-manager="txManage">
+    	<tx:attributes>
+    		<tx:method name="ins*"/>
+    		<tx:method name="del*"/>
+    		<tx:method name="upd*"/>
+    		<tx:method name="*" read-only="true"/>
+    	</tx:attributes>
+    </tx:advice>
+    <!-- 配置aop -->
+    <aop:config proxy-target-class="true" expose-proxy="true">
+    	<aop:pointcut expression="execution(* com.bjsxt.service.impl.*.*(..))" id="mypoint"/>
+    	<aop:advisor advice-ref="txAdvice" pointcut-ref="mypoint"/>
+    </aop:config>
+        
+</beans>
